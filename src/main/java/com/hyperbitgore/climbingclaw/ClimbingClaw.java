@@ -67,9 +67,9 @@ public class ClimbingClaw {
 	private double y_pos = 0;
 	private double z_pos = 0;
 	//offset from block you move
-	private double x_dif = 0;
-	private double y_dif = 0;
-	private double z_dif = 0;
+	//private double x_dif = 0;
+	//private double y_dif = 0;
+	//private double z_dif = 0;
 	
 	
 	// Directly reference a slf4j logger
@@ -84,10 +84,13 @@ public class ClimbingClaw {
 	
 	
 	//registering climbing claw item
-	public static final RegistryObject<Item> CLIMBING_CLAW = ITEMS.register("climbingclaw", () -> new ClimbingClawItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC).stacksTo(1).durability(1000))); 
+	public static final RegistryObject<Item> CLIMBING_CLAW = ITEMS.register("climbingclaw", () -> new ClimbingClawItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC).stacksTo(1).durability(200))); 
 	
-	//add collision on movement
-	//add durability
+	//make sure player is connect to block
+		//size up player collider and see if it is colliding any blocks
+	//fix player fall speed once you detach
+	//make transitions actually require you to be in range
+	//experiment with p.noPhysics = true;
 	
 	public ClimbingClaw() {
 			IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -132,95 +135,118 @@ public class ClimbingClaw {
 		switch(last_input) {
 		case InputConstants.KEY_SPACE:
 			attached = false;
+			p.resetFallDistance();
 			first = true;
 			break;
 		case InputConstants.KEY_W:
 			if(vertical) {
-				double xc = p.getLookAngle().x() * 0.02;
-				double zc = p.getLookAngle().z() * 0.02;
-				BlockPos b = new BlockPos(x_pos + x_dif + xc, y_pos + y_dif + p.getEyeHeight(), z_pos + z_dif + zc);
-				System.out.println("Player: " + p.getX() + ", " + p.getY() + ", " + p.getZ());
-				System.out.println("Check: " + b.getX() + ", " + b.getY() + ", " + b.getZ());
-				if(p.getLevel().getBlockState(b).isAir()) {
-					x_dif += xc;
-					z_dif += zc;
-				}
+				//double xc = p.getLookAngle().x() * 0.02;
+				//double zc = p.getLookAngle().z() * 0.02;
+				//BlockPos b = new BlockPos(x_pos + xc, y_pos, z_pos + zc);
+				//System.out.println("Player: " + p.getX() + ", " + p.getY() + ", " + p.getZ());
+				//System.out.println("Check: " + b.getX() + ", " + b.getY() + ", " + b.getZ());
+				//if(p.getLevel().getBlockState(b).isAir()) {
+					//x_pos += xc;
+					//z_pos += zc;
+				//}
+				
 			}else {
-				BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif + 0.01, z_pos + z_dif);
+				BlockPos b = new BlockPos(x_pos, y_pos + 1.8 + 0.01, z_pos);
 				if(p.getLevel().getBlockState(b).isAir()) {
-					y_dif += 0.01;
+					y_pos += 0.01;
 				}
 			}
 			break;
 		case InputConstants.KEY_S:
 			if(vertical) {
-				double xc = p.getLookAngle().x() * 0.02;
-				double zc = p.getLookAngle().z() * 0.02;
-				BlockPos b = new BlockPos(x_pos + x_dif - xc, y_pos + y_dif + p.getEyeHeight(), z_pos + z_dif - zc);
-				if(p.getLevel().getBlockState(b).isAir()) {
-					x_dif -= xc;
-					z_dif -= zc;
-				}
+				//double xc = p.getLookAngle().x() * 0.02;
+				//double zc = p.getLookAngle().z() * 0.02;
+				//BlockPos b = new BlockPos(x_pos - xc, y_pos + 2, z_pos - zc);
+				//if(p.getLevel().getBlockState(b).isAir()) {
+					//x_pos -= xc;
+					//z_pos -= zc;
+				//}
+				
 			}else {
-				BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif - 0.01, z_pos + z_dif);
+				BlockPos b = new BlockPos(x_pos, y_pos - 0.01, z_pos);
 				if(p.getLevel().getBlockState(b).isAir()) {
-					y_dif -= 0.01;
+					y_pos -= 0.01;
 				}
 			}
 			break;
 		case InputConstants.KEY_A:
-			if(x_dir) {
-				BlockPos b = new BlockPos(x_pos + x_dif + 0.01, y_pos + y_dif, z_pos + z_dif);
-				if(p.getLevel().getBlockState(b).isAir()) {
-					x_dif += 0.01;
+			
+			/*if(x_dir) {
+				float x_change = (x_pos < 0) ? -0.01f : 0.01f;
+				x_dif += x_change;
+				BlockPos b = new BlockPos(Math.round(x_pos + x_dif), Math.round(y_pos + y_dif + 1.8), Math.round(z_pos + z_dif));
+				BlockPos b2 = new BlockPos(Math.round(x_pos + x_dif), Math.round(y_pos + y_dif), Math.round(z_pos + z_dif));
+				//if(p.isColliding(b, p.getLevel().getBlockState(b)) || p.isColliding(b2, p.getLevel().getBlockState(b2))) {
+					//x_dif -= x_change;
+					//System.out.println("Colliding");
+				//}
+				if(p.getLevel().getBlockState(b).getMaterial().isSolidBlocking() || p.getLevel().getBlockState(b2).getMaterial().isSolidBlocking()) {
+					x_dif -= x_change;
+					System.out.println("Collidng");
 				}
+				System.out.println("PosX: " + b);
+				System.out.println("P Pos: " + (x_pos + x_dif) + ", " + (y_pos + y_dif) + ", " + (z_pos + z_dif));
 			}else {
-				BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif, z_pos + z_dif + 0.01);
-				if(p.getLevel().getBlockState(b).isAir()) {
-					z_dif += 0.01;
-				}
-			}
+				//int dec = (int) (z_pos + z_dif);
+				//double frac = (z_pos + z_dif) - dec;
+				//System.out.println(Math.abs(frac));
+				//float z_change = (z_pos < 0) ? 0.01f : -0.01f;
+				p.setDeltaMovement(0, 0, p.getDeltaMovement().z());
+			}*/
+			
 			break;
 		case InputConstants.KEY_D:
-			if(x_dir) {
-				BlockPos b = new BlockPos(x_pos + x_dif - 0.01, y_pos + y_dif, z_pos + z_dif);
-				if(p.getLevel().getBlockState(b).isAir()) {
-					x_dif -= 0.01;
+			/*if(x_dir) {
+				float x_change = (x_pos < 0) ? 0.01f : -0.01f;
+				x_dif += x_change;
+				BlockPos b = new BlockPos(x_pos + x_dif + (x_change * 100), y_pos + y_dif + 1.8, z_pos + z_dif);
+				if(!p.getLevel().getBlockState(b).isAir()) {
+					x_dif -= x_change;
 				}
 			}else {
-				BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif, z_pos + z_dif - 0.01);
-				if(p.getLevel().getBlockState(b).isAir()) {
-					z_dif -= 0.01;
+				int dec = (int) (z_pos + z_dif);
+				double frac = (z_pos + z_dif) - dec;
+				System.out.println(Math.abs(frac));
+				float z_change = (z_pos < 0) ? -0.01f : 0.01f;
+				z_dif += z_change;
+				if(Math.abs(frac) <= 0.69) {
+					BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif, z_pos + z_dif + (z_change * 100));
+					BlockPos b2 = new BlockPos(x_pos + x_dif, y_pos + y_dif + p.getEyeHeight(), z_pos + z_dif + (z_change * 100));
+					if(p.getLevel().getBlockState(b).getMaterial().isSolidBlocking() || p.getLevel().getBlockState(b2).getMaterial().isSolidBlocking()) {
+						z_dif -= z_change;
+					}
+					System.out.println("Pos: " + b);
 				}
-			}
+				
+				System.out.println("P Pos: " + (x_pos + x_dif) + ", " + (y_pos + y_dif) + ", " + (z_pos + z_dif));
+				//System.out.println("Z Dif: " + z_dif);
+			}*/
 			break;
 		}
 		last_input = -1;
-		if(x_dif >= 0.5) {
-			x_dif = 0.5;
-		}else if(x_dif <= -0.5) {
-			x_dif = -0.5;
-		}
-		if(y_dif >= 0.5) {
-			y_dif = 0.5;
-		}else if(y_dif <= -0.5) {
-			y_dif = -0.5;
-		}
-		if(z_dif >= 0.5) {
-			z_dif = 0.5;
-		}else if(z_dif <= -0.5) {
-			z_dif = -0.5;
-		}
-		
 		if(last_pos != null) {
 			if(attached) {
+				
 				if(vertical) {
+					p.setPos(p.getX(), y_pos, p.getZ());
 					if(top) {
 						p.setPose(Pose.SWIMMING);
 					}
-					//maybe needed later
+				}else {
+					if(x_dir) {
+						p.setPos(p.getX(), y_pos, z_pos);
+						x_pos = p.getX();
+					}else {
+						
+						p.setPos(x_pos, y_pos,  p.getZ());
+						z_pos = p.getZ();
+					}
 				}
-				p.setPos(x_pos + x_dif, y_pos + y_dif, z_pos + z_dif);
 			}
 		}
 	}
@@ -348,6 +374,9 @@ public class ClimbingClaw {
 				}else {
 					switch(d) {
 					case UP:
+						y_pos = f.above().getY();
+						x_pos = f.above().getX() + 0.5;
+						z_pos = f.above().getZ() + 0.5;
 						vertical = true;
 						top = true;
 						break;
@@ -372,9 +401,6 @@ public class ClimbingClaw {
 						vertical = false;
 						break;
 					}
-					x_pos = x_pos + x_dif;
-					y_pos = y_pos + y_dif;
-					z_pos = z_pos + z_dif;
 				}
 				
 				//AABB bound = new AABB(new BlockPos(p.getX(), p.getY(), p.getZ()), new BlockPos(p.getX() + 0.5, p.getY() - 0.5, p.getZ()));
@@ -383,12 +409,17 @@ public class ClimbingClaw {
 					System.out.println("Colliding");
 				}*/
 				//System.out.println("Above: " + above.getX() + ", " + above.getY() + ", " + above.getZ());
-				System.out.println("org: " + bp.getX() + ", " + bp.getY() + ", " + bp.getZ());
-				System.out.println(x_pos + ", " + y_pos + ", " + z_pos + ", axis: " + a);
+				//System.out.println("org: " + bp.getX() + ", " + bp.getY() + ", " + bp.getZ());
+				//System.out.println(x_pos + ", " + y_pos + ", " + z_pos + ", axis: " + a);
+				p.getItemInHand(event.getHand()).setDamageValue(p.getItemInHand(event.getHand()).getDamageValue() + 1);
+				if(p.getItemInHand(event.getHand()).getDamageValue() > p.getItemInHand(event.getHand()).getMaxDamage()) {
+					//p.getItemInHand(event.getHand());
+					//System.out.println("damaged");
+					//event.getLevel().playSou
+					p.broadcastBreakEvent(event.getHand());
+					p.getItemInHand(event.getHand()).setCount(0);
+				}
 				p.setPos(x_pos, y_pos, z_pos);
-				x_dif = 0;
-				y_dif = 0;
-				z_dif = 0;
 				attached = true;
 				last_pos = new BlockPos(x_pos, y_pos, z_pos);
 			}
