@@ -27,6 +27,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -70,7 +71,9 @@ public class ClimbingClaw {
 	//private double x_dif = 0;
 	//private double y_dif = 0;
 	//private double z_dif = 0;
-	
+	private boolean dmove = false;
+	private Vec3 last_look;
+	private Vec3 opposite_look;
 	
 	// Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -86,11 +89,7 @@ public class ClimbingClaw {
 	//registering climbing claw item
 	public static final RegistryObject<Item> CLIMBING_CLAW = ITEMS.register("climbingclaw", () -> new ClimbingClawItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC).stacksTo(1).durability(200))); 
 	
-	//make sure player is connect to block
-		//size up player collider and see if it is colliding any blocks
-	//fix player fall speed once you detach
 	//make transitions actually require you to be in range
-	//experiment with p.noPhysics = true;
 	
 	public ClimbingClaw() {
 			IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -128,6 +127,58 @@ public class ClimbingClaw {
 		}
 	}*/
 	
+	private boolean checkAboveRange(Player p) {
+		for(double y = p.getEyeY(); y <= p.getEyeY() + 1; y += 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(p.getX(), y, p.getZ())).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	private boolean checkBelowRange(Player p) {
+		for(double y = p.getY(); y >= p.getY() - 1; y -= 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(p.getX(), y, p.getZ())).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean checkXRangePos(Player p) {
+		for(double x = p.getX(); x <= p.getX() + 1; x += 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(x, p.getEyeY(), p.getZ())).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	private boolean checkXRangeNeg(Player p) {
+		for(double x = p.getX(); x >= p.getX() - 1; x -= 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(x, p.getEyeY(), p.getZ())).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	private boolean checkZRangePos(Player p) {
+		for(double z = p.getZ(); z <= p.getZ() + 1; z += 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(p.getX(), p.getEyeY(), z)).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	private boolean checkZRangeNeg(Player p) {
+		for(double z = p.getZ(); z >= p.getZ() - 1; z -= 0.1) {
+			if(p.getLevel().getBlockState(new BlockPos(p.getX(), p.getEyeY(), z)).getMaterial().isSolidBlocking()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	@SubscribeEvent
 	public void onTick(TickEvent.PlayerTickEvent event) {
 		
@@ -139,7 +190,25 @@ public class ClimbingClaw {
 			first = true;
 			break;
 		case InputConstants.KEY_W:
-			if(vertical) {
+			if(vertical || top) {
+				//p.setPos(p.getX(), y_));
+				if(!checkAboveRange(p)) {
+				
+					/*last_look = p.getLookAngle();
+					double deg_x = Math.toDegrees(last_look.x());
+					double deg_z = Math.toDegrees(last_look.z());
+					opposite_look = new Vec3(Math.toRadians((deg_x + 180) % 360), 0, Math.toRadians((deg_z + 180) % 360));
+					
+					System.out.println("Look: " + last_look + ", opposite: " + opposite_look);
+					p.setPos(p.getX() - p.moveDist, y_pos, p.getZ() - p.moveDist);
+					x_pos = p.getX();
+					z_pos = p.getZ();
+					dmove = true;*/
+					
+					
+					//dmove = true;
+					//System.out.println("Still connect on top");
+				}
 				//double xc = p.getLookAngle().x() * 0.02;
 				//double zc = p.getLookAngle().z() * 0.02;
 				//BlockPos b = new BlockPos(x_pos + xc, y_pos, z_pos + zc);
@@ -158,7 +227,11 @@ public class ClimbingClaw {
 			}
 			break;
 		case InputConstants.KEY_S:
-			if(vertical) {
+			if(vertical || top) {
+				/*if(!checkAboveRange(p)) {
+					dmove = true;
+					//System.out.println("Still connect on top");
+				}*/
 				//double xc = p.getLookAngle().x() * 0.02;
 				//double zc = p.getLookAngle().z() * 0.02;
 				//BlockPos b = new BlockPos(x_pos - xc, y_pos + 2, z_pos - zc);
@@ -231,19 +304,43 @@ public class ClimbingClaw {
 		last_input = -1;
 		if(last_pos != null) {
 			if(attached) {
-				
 				if(vertical) {
-					p.setPos(p.getX(), y_pos, p.getZ());
-					if(top) {
-						p.setPose(Pose.SWIMMING);
+					if(checkAboveRange(p)) {
+						p.setPos(p.getX(), y_pos, p.getZ());
+					}else {
+						p.setPos(x_pos, y_pos, z_pos);
 					}
-				}else {
+					x_pos = p.getX();
+					z_pos = p.getZ();
+					
+				}else if(top) {
+					//check below
+					if(checkBelowRange(p)) {
+						p.setPos(p.getX(), y_pos, p.getZ());
+					}else {
+						p.setPos(x_pos, y_pos, z_pos);
+					}
+					p.setPose(Pose.SWIMMING);
+					x_pos = p.getX();
+					z_pos = p.getZ();
+				} 
+				else {
 					if(x_dir) {
-						p.setPos(p.getX(), y_pos, z_pos);
+						//check z dir
+						if(checkZRangePos(p) || checkZRangeNeg(p)) {
+							p.setPos(p.getX(), y_pos, z_pos);
+						}else {
+							p.setPos(x_pos, y_pos,  z_pos);
+						}
+						
 						x_pos = p.getX();
 					}else {
-						
-						p.setPos(x_pos, y_pos,  p.getZ());
+						//check x dir
+						if(checkXRangePos(p) || checkXRangeNeg(p)) {
+							p.setPos(x_pos, y_pos,  p.getZ());
+						}else {
+							p.setPos(x_pos, y_pos,  z_pos);
+						}
 						z_pos = p.getZ();
 					}
 				}
@@ -292,7 +389,7 @@ public class ClimbingClaw {
 							return;
 						}
 						//f = bp.above();
-						vertical = true;
+						vertical = false;
 						top = true;
 						//f.atY(bp.getY() + 1);
 						break;
@@ -377,7 +474,7 @@ public class ClimbingClaw {
 						y_pos = f.above().getY();
 						x_pos = f.above().getX() + 0.5;
 						z_pos = f.above().getZ() + 0.5;
-						vertical = true;
+						vertical = false;
 						top = true;
 						break;
 					case DOWN:
@@ -412,15 +509,16 @@ public class ClimbingClaw {
 				//System.out.println("org: " + bp.getX() + ", " + bp.getY() + ", " + bp.getZ());
 				//System.out.println(x_pos + ", " + y_pos + ", " + z_pos + ", axis: " + a);
 				p.getItemInHand(event.getHand()).setDamageValue(p.getItemInHand(event.getHand()).getDamageValue() + 1);
+				attached = true;
 				if(p.getItemInHand(event.getHand()).getDamageValue() > p.getItemInHand(event.getHand()).getMaxDamage()) {
 					//p.getItemInHand(event.getHand());
 					//System.out.println("damaged");
 					//event.getLevel().playSou
 					p.broadcastBreakEvent(event.getHand());
 					p.getItemInHand(event.getHand()).setCount(0);
+					attached = false;
 				}
 				p.setPos(x_pos, y_pos, z_pos);
-				attached = true;
 				last_pos = new BlockPos(x_pos, y_pos, z_pos);
 			}
 		}
