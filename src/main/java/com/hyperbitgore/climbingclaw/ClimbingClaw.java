@@ -57,23 +57,21 @@ public class ClimbingClaw {
 
 	
 	private int last_input = -1;
+	//booleans for climbing
 	private boolean attached;
 	private boolean vertical = false;
 	private boolean top = false;
 	private boolean x_dir = false;
+	//boolean if it's first attach
 	private boolean first = true;
+	//boolean to tell if you can move vertically
+	private boolean vert_possible = false;
+	
 	private BlockPos last_pos = null;
 	//current position
 	private double x_pos = 0;
 	private double y_pos = 0;
 	private double z_pos = 0;
-	//offset from block you move
-	//private double x_dif = 0;
-	//private double y_dif = 0;
-	//private double z_dif = 0;
-	private boolean dmove = false;
-	private Vec3 last_look;
-	private Vec3 opposite_look;
 	
 	// Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -83,13 +81,13 @@ public class ClimbingClaw {
 	
 	//item register
 	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, ClimbingClaw.modid);
-	//item properties
-	
 	
 	//registering climbing claw item
 	public static final RegistryObject<Item> CLIMBING_CLAW = ITEMS.register("climbingclaw", () -> new ClimbingClawItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC).stacksTo(1).durability(200))); 
 	
-	//make transitions actually require you to be in range
+	
+	//test mod on server
+	//make movement more responsive and less janky
 	
 	public ClimbingClaw() {
 			IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -120,12 +118,6 @@ public class ClimbingClaw {
 		last_input = event.getKey();
 	}
 	
-	/*@SubscribeEvent
-	public void onFall(LivingFallEvent event) {
-		if(event.getEntity().getClass() == Player.class) {
-			System.out.println("Player falling");
-		}
-	}*/
 	
 	private boolean checkAboveRange(Player p) {
 		for(double y = p.getEyeY(); y <= p.getEyeY() + 1; y += 0.1) {
@@ -190,115 +182,26 @@ public class ClimbingClaw {
 			first = true;
 			break;
 		case InputConstants.KEY_W:
-			if(vertical || top) {
-				//p.setPos(p.getX(), y_));
-				if(!checkAboveRange(p)) {
-				
-					/*last_look = p.getLookAngle();
-					double deg_x = Math.toDegrees(last_look.x());
-					double deg_z = Math.toDegrees(last_look.z());
-					opposite_look = new Vec3(Math.toRadians((deg_x + 180) % 360), 0, Math.toRadians((deg_z + 180) % 360));
-					
-					System.out.println("Look: " + last_look + ", opposite: " + opposite_look);
-					p.setPos(p.getX() - p.moveDist, y_pos, p.getZ() - p.moveDist);
-					x_pos = p.getX();
-					z_pos = p.getZ();
-					dmove = true;*/
-					
-					
-					//dmove = true;
-					//System.out.println("Still connect on top");
-				}
-				//double xc = p.getLookAngle().x() * 0.02;
-				//double zc = p.getLookAngle().z() * 0.02;
-				//BlockPos b = new BlockPos(x_pos + xc, y_pos, z_pos + zc);
-				//System.out.println("Player: " + p.getX() + ", " + p.getY() + ", " + p.getZ());
-				//System.out.println("Check: " + b.getX() + ", " + b.getY() + ", " + b.getZ());
-				//if(p.getLevel().getBlockState(b).isAir()) {
-					//x_pos += xc;
-					//z_pos += zc;
-				//}
-				
-			}else {
+			if(!vertical || !top) {
 				BlockPos b = new BlockPos(x_pos, y_pos + 1.8 + 0.01, z_pos);
-				if(p.getLevel().getBlockState(b).isAir()) {
+				if(p.getLevel().getBlockState(b).isAir() && vert_possible) {
 					y_pos += 0.01;
 				}
 			}
 			break;
 		case InputConstants.KEY_S:
-			if(vertical || top) {
-				/*if(!checkAboveRange(p)) {
-					dmove = true;
-					//System.out.println("Still connect on top");
-				}*/
-				//double xc = p.getLookAngle().x() * 0.02;
-				//double zc = p.getLookAngle().z() * 0.02;
-				//BlockPos b = new BlockPos(x_pos - xc, y_pos + 2, z_pos - zc);
-				//if(p.getLevel().getBlockState(b).isAir()) {
-					//x_pos -= xc;
-					//z_pos -= zc;
-				//}
-				
-			}else {
+			if(!vertical || !top) {
 				BlockPos b = new BlockPos(x_pos, y_pos - 0.01, z_pos);
-				if(p.getLevel().getBlockState(b).isAir()) {
+				if(p.getLevel().getBlockState(b).isAir() && vert_possible) {
 					y_pos -= 0.01;
-				}
+				}	
 			}
 			break;
 		case InputConstants.KEY_A:
 			
-			/*if(x_dir) {
-				float x_change = (x_pos < 0) ? -0.01f : 0.01f;
-				x_dif += x_change;
-				BlockPos b = new BlockPos(Math.round(x_pos + x_dif), Math.round(y_pos + y_dif + 1.8), Math.round(z_pos + z_dif));
-				BlockPos b2 = new BlockPos(Math.round(x_pos + x_dif), Math.round(y_pos + y_dif), Math.round(z_pos + z_dif));
-				//if(p.isColliding(b, p.getLevel().getBlockState(b)) || p.isColliding(b2, p.getLevel().getBlockState(b2))) {
-					//x_dif -= x_change;
-					//System.out.println("Colliding");
-				//}
-				if(p.getLevel().getBlockState(b).getMaterial().isSolidBlocking() || p.getLevel().getBlockState(b2).getMaterial().isSolidBlocking()) {
-					x_dif -= x_change;
-					System.out.println("Collidng");
-				}
-				System.out.println("PosX: " + b);
-				System.out.println("P Pos: " + (x_pos + x_dif) + ", " + (y_pos + y_dif) + ", " + (z_pos + z_dif));
-			}else {
-				//int dec = (int) (z_pos + z_dif);
-				//double frac = (z_pos + z_dif) - dec;
-				//System.out.println(Math.abs(frac));
-				//float z_change = (z_pos < 0) ? 0.01f : -0.01f;
-				p.setDeltaMovement(0, 0, p.getDeltaMovement().z());
-			}*/
-			
 			break;
 		case InputConstants.KEY_D:
-			/*if(x_dir) {
-				float x_change = (x_pos < 0) ? 0.01f : -0.01f;
-				x_dif += x_change;
-				BlockPos b = new BlockPos(x_pos + x_dif + (x_change * 100), y_pos + y_dif + 1.8, z_pos + z_dif);
-				if(!p.getLevel().getBlockState(b).isAir()) {
-					x_dif -= x_change;
-				}
-			}else {
-				int dec = (int) (z_pos + z_dif);
-				double frac = (z_pos + z_dif) - dec;
-				System.out.println(Math.abs(frac));
-				float z_change = (z_pos < 0) ? -0.01f : 0.01f;
-				z_dif += z_change;
-				if(Math.abs(frac) <= 0.69) {
-					BlockPos b = new BlockPos(x_pos + x_dif, y_pos + y_dif, z_pos + z_dif + (z_change * 100));
-					BlockPos b2 = new BlockPos(x_pos + x_dif, y_pos + y_dif + p.getEyeHeight(), z_pos + z_dif + (z_change * 100));
-					if(p.getLevel().getBlockState(b).getMaterial().isSolidBlocking() || p.getLevel().getBlockState(b2).getMaterial().isSolidBlocking()) {
-						z_dif -= z_change;
-					}
-					System.out.println("Pos: " + b);
-				}
-				
-				System.out.println("P Pos: " + (x_pos + x_dif) + ", " + (y_pos + y_dif) + ", " + (z_pos + z_dif));
-				//System.out.println("Z Dif: " + z_dif);
-			}*/
+			
 			break;
 		}
 		last_input = -1;
@@ -328,8 +231,10 @@ public class ClimbingClaw {
 					if(x_dir) {
 						//check z dir
 						if(checkZRangePos(p) || checkZRangeNeg(p)) {
+							vert_possible = true;
 							p.setPos(p.getX(), y_pos, z_pos);
 						}else {
+							vert_possible = false;
 							p.setPos(x_pos, y_pos,  z_pos);
 						}
 						
@@ -337,8 +242,10 @@ public class ClimbingClaw {
 					}else {
 						//check x dir
 						if(checkXRangePos(p) || checkXRangeNeg(p)) {
+							vert_possible = true;
 							p.setPos(x_pos, y_pos,  p.getZ());
 						}else {
+							vert_possible = false;
 							p.setPos(x_pos, y_pos,  z_pos);
 						}
 						z_pos = p.getZ();
@@ -348,67 +255,59 @@ public class ClimbingClaw {
 		}
 	}
 	
-	/*@SubscribeEvent
-	public void onClientInput(MovementInputUpdateEvent event) {
-		
-	}
-	
-	@SubscribeEvent 
-	public void onPlayerAttribute(EntityAttributeCreationEvent event) {
-		
-	}*/
-	
 	//https://forums.minecraftforge.net/topic/88603-solved-how-to-see-which-face-of-a-block-the-player-has-collided-with/
 	//attach to wall and stop player from moving by taking event in for movement, as well let player move block he is attached to 
 	@SubscribeEvent
 	public void rightClick(PlayerInteractEvent.RightClickBlock event) {
 		if(event.getItemStack().getItem() instanceof ClimbingClawItem) {
-			//System.out.println("Item right clicked!");
 			if(event.getFace() != null) {
-				//System.out.println("Item right clicked a face!");
 				Direction d = event.getFace();
-				Axis a = d.getAxis();
-				//System.out.println("Axis: " + a.toString() + ", Direction: " + d);
 				BlockPos bp = event.getPos();
 				BlockPos f = bp;
 				BlockPos above;
 				Player p = event.getEntity();
 				//checking if within claw range
-				if(first) {
-					//System.out.println("Direction: " + d);
-					//System.out.println(Math.abs(bp.getX() - p.getX()) + ", " + (Math.abs(bp.getY() - p.getY()) + ", " + (Math.abs(bp.getZ() - p.getZ()))));
+				//if(first) {
 					vertical = false;
+					top = false;
 					double x_off = p.getX() - bp.getX();
 					double y_off = p.getY() - bp.getY();
 					double z_off = p.getZ() - bp.getZ();
-					
+					boolean n_def = false;
 					switch(d) {
 					case UP:
-						if(Math.abs(x_off) > 1.2 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 1.2)){
-							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
-							return;
+						if(first) {
+							if(Math.abs(x_off) > 1.2 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 1.2)){
+								p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
+								return;
+							}
+							
+						}else {
+							if(Math.abs(x_off) > 1.5 || (Math.abs(y_off) > 2.0) || (Math.abs(z_off) > 1.5)){
+								p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
+								return;
+							}
+							y_pos = f.above().getY();
+							x_pos = f.above().getX() + 0.5;
+							z_pos = f.above().getZ() + 0.5;
+							n_def = true;
 						}
-						//f = bp.above();
 						vertical = false;
 						top = true;
-						//f.atY(bp.getY() + 1);
 						break;
 					case DOWN:
 						if(Math.abs(x_off) > 0.7 || (Math.abs(y_off) > 2.0) || (Math.abs(z_off) > 0.7)){
 							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
 							return;
 						}
-						//f = bp.below();
 						vertical = true;
 						top = false;
-						//f.atY(bp.getY() - 1);
 						break;
 					case EAST:
 						if(Math.abs(x_off) > 1.31 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 1.0)){
 							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
 							return;
 						}
-						//f = bp.east();
 						x_dir = false;
 						above = new BlockPos(x_pos, y_pos + 1.0, z_pos);
 						if(!p.getLevel().getBlockState(above).isAir()) {
@@ -416,14 +315,12 @@ public class ClimbingClaw {
 								y_pos -= 1.0;
 							}
 						}
-						//f = new BlockPos(f.getX() + 0.8, f.getY(), f.getZ());
 						break;
 					case WEST:
 						if(Math.abs(x_off) > 0.31 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 1.0)){
 							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
 							return;
 						}
-						//f = bp.west();
 						x_dir = false;
 						above = new BlockPos(x_pos, y_pos + 1.0, z_pos);
 						if(!p.getLevel().getBlockState(above).isAir()) {
@@ -431,14 +328,12 @@ public class ClimbingClaw {
 								y_pos -= 1.0;
 							}
 						}
-						//f = new BlockPos(f.getX(), f.getY(), f.getZ());
 						break;
 					case SOUTH:
 						if(Math.abs(x_off) > 1.0 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 1.31)){
 							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
 							return;
 						}
-						//f = bp.south();
 						x_dir = true;
 						above = new BlockPos(x_pos, y_pos + 1.0, z_pos);
 						if(!p.getLevel().getBlockState(above).isAir()) {
@@ -446,14 +341,12 @@ public class ClimbingClaw {
 								y_pos -= 1.0;
 							}
 						}
-						//f = new BlockPos(f.getX(), f.getY(), f.getZ() + 0.5);
 						break;
 					case NORTH:
 						if(Math.abs(x_off) > 1.0 || (Math.abs(y_off) > 1.0) || (Math.abs(z_off) > 0.31)){
 							p.sendSystemMessage(Component.translatable("You need to be closer to attach"));
 							return;
 						}
-						//f = bp.north();
 						x_dir = true;
 						above = new BlockPos(x_pos, y_pos + 1.0, z_pos);
 						if(!p.getLevel().getBlockState(above).isAir()) {
@@ -461,14 +354,15 @@ public class ClimbingClaw {
 								y_pos -= 1.0;
 							}
 						}
-						//f = new BlockPos(f.getX(), f.getY(), f.getZ() - 0.5);
 						break;
 					}
-					x_pos = f.getX() + x_off;
-					y_pos = f.getY() + y_off;
-					z_pos = f.getZ() + z_off;
+					if(!n_def) {
+						x_pos = f.getX() + x_off;
+						y_pos = f.getY() + y_off;
+						z_pos = f.getZ() + z_off;
+					}
 					first = false;
-				}else {
+				/*}else {
 					switch(d) {
 					case UP:
 						y_pos = f.above().getY();
@@ -498,22 +392,10 @@ public class ClimbingClaw {
 						vertical = false;
 						break;
 					}
-				}
-				
-				//AABB bound = new AABB(new BlockPos(p.getX(), p.getY(), p.getZ()), new BlockPos(p.getX() + 0.5, p.getY() - 0.5, p.getZ()));
-				//ArrayList<VoxelShape> cols = (ArrayList<VoxelShape>) p.getLevel().getCollisions(p, bound);
-				/*if(p.isColliding(f, p.getLevel().getBlockState(f))) {
-					System.out.println("Colliding");
 				}*/
-				//System.out.println("Above: " + above.getX() + ", " + above.getY() + ", " + above.getZ());
-				//System.out.println("org: " + bp.getX() + ", " + bp.getY() + ", " + bp.getZ());
-				//System.out.println(x_pos + ", " + y_pos + ", " + z_pos + ", axis: " + a);
 				p.getItemInHand(event.getHand()).setDamageValue(p.getItemInHand(event.getHand()).getDamageValue() + 1);
 				attached = true;
 				if(p.getItemInHand(event.getHand()).getDamageValue() > p.getItemInHand(event.getHand()).getMaxDamage()) {
-					//p.getItemInHand(event.getHand());
-					//System.out.println("damaged");
-					//event.getLevel().playSou
 					p.broadcastBreakEvent(event.getHand());
 					p.getItemInHand(event.getHand()).setCount(0);
 					attached = false;
